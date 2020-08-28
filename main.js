@@ -1,6 +1,6 @@
 // find a data source
 const dataSource =
-  "::20200827\nBad Moves\nUntenable\n::20200827\nSank Into The Sun::20200101\nNew Year!::20190827\nNext year, listen to Bad Moves::20200827\nMade an additional commit to the repo.::20200824\nMade an initial commit to the repo.::202003\nThis one is wrong!";
+  '::20200827\nBad Moves\nUntenable\n::20200827\nSank Into The Sun::20200101\nNew Year!::20190827\nNext year, listen to Bad Moves::20200827\nMade an additional commit to the repo.::20200824 this is a git note\nMade an initial commit to the repo.::202003\nThis one is wrong!\n::19991231\nY2k bugs! Yikes!\n::19991110\nKiernan Shipka\'s birthday::20150407\n"Ivy Tripp" is released, according to Bandcamp.com';
 
 // parse out potential notes from that data
 const dataDoubleColonCheck = (elem) => elem.includes("::");
@@ -36,7 +36,7 @@ const stringsErrorDateNoDigits = potentialMatches.filter(
 );
 
 // these are all strings that came back with dates correctly formatted
-const stringsCheckedCorrect = stringsBestCase.concat(stringsSideNotes);
+// const stringsCheckedCorrect = stringsBestCase.concat(stringsSideNotes);
 // these are all strings that came back with date formatting errors
 const stringsCheckedIncorrect = stringsErrorDateTooManyDigits.concat(
   stringsErrorDateTooFewDigits,
@@ -52,9 +52,19 @@ if (stringsCheckedIncorrect)
   console.log("Input data has incorrectly entered dates.");
 
 // create arrays of note objects from correct matches
-const arrayNoteObjects = stringsCheckedCorrect.map((elem) => {
-  return { date: elem.slice(0, 8), content: elem.slice(8) };
-});
+const arrayNoteObjects = stringsBestCase
+  .map((elem) => {
+    return { date: elem.slice(0, 8), content: elem.slice(8) };
+  })
+  .concat(
+    stringsSideNotes.map((elem) => {
+      return {
+        date: elem.slice(0, 8),
+        sidenote: elem.slice(8, elem.indexOf("\n")),
+        content: elem.slice(elem.indexOf("\n")),
+      };
+    })
+  );
 // an array of the Note Objects sorted by date ascending
 const arrayNoteObjectsSorted = arrayNoteObjects.slice().sort((a, b) => {
   if (a.date < b.date) return -1;
@@ -85,30 +95,19 @@ const arrayDateObjects = combineSameDates(
   arrayNoteObjectsSorted.map(noteToDate)
 );
 
-// make an array of Year Objects to replace all this
-const dates2011 = arrayDateObjects.filter((x) => x.date.match(/^2011/));
-const dates2012 = arrayDateObjects.filter((x) => x.date.match(/^2012/));
-const dates2013 = arrayDateObjects.filter((x) => x.date.match(/^2013/));
-const dates2014 = arrayDateObjects.filter((x) => x.date.match(/^2014/));
-const dates2015 = arrayDateObjects.filter((x) => x.date.match(/^2015/));
-const dates2016 = arrayDateObjects.filter((x) => x.date.match(/^2016/));
-const dates2017 = arrayDateObjects.filter((x) => x.date.match(/^2017/));
-const dates2018 = arrayDateObjects.filter((x) => x.date.match(/^2018/));
-const dates2019 = arrayDateObjects.filter((x) => x.date.match(/^2019/));
-const dates2020 = arrayDateObjects.filter((x) => x.date.match(/^2020/));
+// find first and last year in the sorted ascending array of Date Objects
+const firstYear = arrayDateObjects[0].date.slice(0, 4);
+const lastYear = arrayDateObjects[arrayDateObjects.length - 1].date.slice(0, 4);
 
-const arrayYears = [
-  dates2011,
-  dates2012,
-  dates2013,
-  dates2014,
-  dates2015,
-  dates2016,
-  dates2017,
-  dates2018,
-  dates2019,
-  dates2020,
-];
+const createArrayYears = () => {
+  let array = [];
+  for (var i = 0; i <= lastYear - firstYear; i++) {
+    var yearString = (new Number(firstYear) + i).toString();
+    var regex = new RegExp("^" + yearString);
+    array.push(arrayDateObjects.filter((x) => x.date.match(regex)));
+  }
+  return array;
+};
 
 const populateYear = (arr) => {
   if (arr.length > 0) {
@@ -121,18 +120,26 @@ const populateYear = (arr) => {
       );
     arr.forEach((elem) => {
       var elemDate = elem.date;
-      var elemContent = elem.content.map(
-        (n) => "<p>" + removeLeadingNewline(n.content) + "</p>"
-      );
+      var elemContent = elem.content.map((n) => {
+        return n.sidenote
+          ? `<h4>${n.sidenote}</h4><p>${removeLeadingNewline(n.content)}</p>`
+          : "<p>" + removeLeadingNewline(n.content) + "</p>";
+      });
       document
         .getElementById("div-" + yearString)
         .insertAdjacentHTML(
           "beforeend",
-          newlineToBreakTag(`<h3>${elemDate}</h3>${elemContent.join("<hr>")}`)
+          newlineToBreakTag(
+            `<h3 id="header-${elemDate}">${elemDate}</h3>${elemContent.join(
+              "<hr>"
+            )}`
+          )
         );
     });
   }
 };
+
+const arrayYears = createArrayYears();
 
 document.body.onload = arrayYears.forEach((y) => {
   populateYear(y);
